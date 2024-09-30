@@ -61,6 +61,7 @@ def likelihood_loss(r, x, metric='BCE'):
     """
     r = r.view(r.size()[0], -1)
     x = x.view(x.size()[0], -1)
+    likelihood_loss = -torch.sum(x * torch.log(r + 1e-8) + (1 - x) * torch.log(1 - r + 1e-8), dim=-1)
 
     if metric == 'BCE':
         likelihood_loss = -torch.sum(x * torch.log(r + 1e-8) + (1 - x) * torch.log(1 - r + 1e-8), dim=-1)
@@ -92,7 +93,7 @@ def train_model(model, optimizer, model_name, train_data, valid_data, save_dir,
     training_total_loss = np.zeros(num_epochs)        # this records total average loss
     training_rec_loss = np.zeros(num_epochs)          # this records the likelihood loss
     training_kl_loss = np.zeros(num_epochs)           # this records the KL loss
-    
+    print(num_epochs)
     for epoch in range(num_epochs):
         start=time.time()
         model.train()
