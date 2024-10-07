@@ -5,7 +5,7 @@ import numpy as np
 from torch.autograd import Variable
 
 cuda = torch.cuda.is_available()
-
+device = torch.device("cuda" if cuda else "cpu")
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, data):
         self.data = data
@@ -88,6 +88,8 @@ def train_model(model, optimizer, model_name, train_data, valid_data, save_dir,
     Returns:
         nn.Module: Trained model.
     """
+    model = model.to(device) 
+    print("using: ", device)
     training_loss = np.zeros(num_epochs)  # Records average loss per epoch
 
     for epoch in range(num_epochs):
