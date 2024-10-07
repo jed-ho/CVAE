@@ -4,8 +4,7 @@ import time
 import numpy as np
 from torch.autograd import Variable
 cuda = torch.cuda.is_available()
-
-
+device = torch.device("cuda" if cuda else "cpu")
 class Dataset(torch.utils.data.Dataset):
     
     def __init__(self, data):
@@ -90,10 +89,12 @@ def train_model(model, optimizer, model_name, train_data, valid_data, save_dir,
     Returns:
         torch model: trained model
     """
+    model = model.to(device) 
+    print("using: ", device)
     training_total_loss = np.zeros(num_epochs)        # this records total average loss
     training_rec_loss = np.zeros(num_epochs)          # this records the likelihood loss
     training_kl_loss = np.zeros(num_epochs)           # this records the KL loss
-    print(num_epochs)
+    print("Number of Epochs: ", num_epochs)
     for epoch in range(num_epochs):
         start=time.time()
         model.train()
@@ -168,6 +169,8 @@ def find_score(model, data, metric='BCE', num_sample=50):
     Returns:
         vector: reconstruction error for each data point. 
     """
+    model = model.to('cpu') #FIXME  data = data.to(device) 
+    print("using: cpu") #FIXME 
     model.eval()
     num_data = np.shape(data)[0]
     data_tensor = torch.tensor(data).float()
