@@ -147,6 +147,52 @@ def train_model(model, optimizer, train_labeled_loader, train_unlabeled_loader, 
               f"Rec Loss: {rec_loss_total:.4f}, "
               f"KL Div: {kl_loss_total:.4f}, "
               f"Class Loss: {class_loss_total:.4f}")
+        
+def train_model_full(model, optimizer, train_loader, num_epochs=10):
+    model = model.to(device)
+    model.train()
+    for epoch in range(num_epochs):
+        total_loss = 0
+        rec_loss_total = 0
+        kl_loss_total = 0
+        class_loss_total = 0
+
+        for X_batch, y_batch in train_loader:
+            X_batch = X_batch.unsqueeze(1).to(device)  # Shape: [batch_size, num_param, window_size]
+            y_batch = y_batch.to(device)
+
+            y_onehot = F.one_hot(y_batch, num_classes=model.num_classes).float()
+
+            optimizer.zero_grad()
+            x_rec, class_logits = model(X_batch, y_onehot)
+
+            # Reconstruction loss
+            likelihood = -likelihood_loss(x_rec, X_batch, metric='MSE')
+            rec_loss = torch.mean(-likelihood)
+
+            # KL divergence
+            kl_div = torch.mean(model.kl_div)
+
+            # Classification loss
+            class_loss = F.cross_entropy(class_logits, y_batch)
+
+            # Total loss
+            loss = rec_loss + kl_div + class_loss
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            rec_loss_total += rec_loss.item()
+            kl_loss_total += kl_div.item()
+            class_loss_total += class_loss.item()
+
+        print(f"Epoch [{epoch+1}/{num_epochs}], "
+              f"Total Loss: {total_loss:.4f}, "
+              f"Rec Loss: {rec_loss_total:.4f}, "
+              f"KL Div: {kl_loss_total:.4f}, "
+              f"Class Loss: {class_loss_total:.4f}")
+ 
 
 
 def find_score(model, data, metric='MSE', num_sample=50):
