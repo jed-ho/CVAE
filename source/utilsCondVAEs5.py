@@ -192,6 +192,7 @@ def train_model_full(model, optimizer, train_loader, num_epochs=10):
               f"Rec Loss: {rec_loss_total:.4f}, "
               f"KL Div: {kl_loss_total:.4f}, "
               f"Class Loss: {class_loss_total:.4f}")
+    return model
  
 
 
