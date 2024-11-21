@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import torch
 import math
 import time
@@ -11,8 +10,6 @@ cuda = torch.cuda.is_available()
 device = torch.device("cuda" if cuda else "cpu")
 
 
-
-
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, data, labels=None):
         self.data = data
@@ -20,7 +17,6 @@ class Dataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.data.shape[0]
-
 
     def __getitem__(self, index):
         X = self.data[index, :, :]
@@ -44,7 +40,6 @@ def get_dataset(train, validation, batch_size=128):
         dataloaders: training and validation dataloaders
     """
 
-
     from torch.utils.data.sampler import SubsetRandomSampler
 
     def get_sampler(data):
@@ -63,22 +58,9 @@ def get_dataset(train, validation, batch_size=128):
         sampler=get_sampler(validation.data),
     )
 
-    train_data = torch.utils.data.DataLoader(
-        train, batch_size=batch_size, pin_memory=cuda, sampler=get_sampler(train.data)
-    )
-    valid_data = torch.utils.data.DataLoader(
-        validation,
-        batch_size=batch_size,
-        pin_memory=cuda,
-        sampler=get_sampler(validation.data),
-    )
-
     return train_data, valid_data
 
 
-def likelihood_loss(
-    r, x, metric="BCE"
-):  # ChatGPT(#CondVAE): Since the data might not be binary, consider using Mean Squared Error (MSE) loss.
 def likelihood_loss(
     r, x, metric="BCE"
 ):  # ChatGPT(#CondVAE): Since the data might not be binary, consider using Mean Squared Error (MSE) loss.
@@ -96,16 +78,7 @@ def likelihood_loss(
     likelihood_loss = -torch.sum(
         x * torch.log(r + 1e-8) + (1 - x) * torch.log(1 - r + 1e-8), dim=-1
     )
-    likelihood_loss = -torch.sum(
-        x * torch.log(r + 1e-8) + (1 - x) * torch.log(1 - r + 1e-8), dim=-1
-    )
 
-    if metric == "BCE":
-        likelihood_loss = -torch.sum(
-            x * torch.log(r + 1e-8) + (1 - x) * torch.log(1 - r + 1e-8), dim=-1
-        )
-    elif metric == "MSE":
-        mse_loss = torch.nn.MSELoss(reduction="none")
     if metric == "BCE":
         likelihood_loss = -torch.sum(
             x * torch.log(r + 1e-8) + (1 - x) * torch.log(1 - r + 1e-8), dim=-1
@@ -115,193 +88,6 @@ def likelihood_loss(
         likelihood_loss = torch.sum(mse_loss(x, r), dim=-1)
 
     return likelihood_loss
-
-
-def train_model_old(
-    model, optimizer, train_labeled_loader, train_unlabeled_loader, num_epochs=10
-):
-def train_model_old(
-    model, optimizer, train_labeled_loader, train_unlabeled_loader, num_epochs=10
-):
-    model = model.to(device)
-    model.train()
-    for epoch in range(num_epochs):
-        total_loss = 0
-        rec_loss_total = 0
-        kl_loss_total = 0
-        class_loss_total = 0
-
-        # Training with labeled data
-        for X_batch, y_batch in train_labeled_loader:
-            X_batch = X_batch.unsqueeze(1).to(
-                device
-            )  # Shape: [batch_size, num_param, window_size]
-            X_batch = X_batch.unsqueeze(1).to(
-                device
-            )  # Shape: [batch_size, num_param, window_size]
-            y_batch = y_batch.to(device)
-
-            y_onehot = F.one_hot(y_batch, num_classes=model.num_classes).float()
-
-            optimizer.zero_grad()
-            x_rec, class_logits = model(X_batch, y_onehot)
-
-            # Reconstruction loss
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
-            rec_loss = torch.mean(-likelihood)
-
-            # KL divergence
-            kl_div = torch.mean(model.kl_div)
-
-            # Classification loss
-            class_loss = F.cross_entropy(class_logits, y_batch)
-
-            # Total loss
-            loss = rec_loss + kl_div + class_loss
-
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-            rec_loss_total += rec_loss.item()
-            kl_loss_total += kl_div.item()
-            class_loss_total += class_loss.item()
-
-        # Training with unlabeled data
-        for X_batch in train_unlabeled_loader:
-            X_batch = X_batch.unsqueeze(1).to(device)
-
-            optimizer.zero_grad()
-            x_rec, class_logits = model(X_batch)
-
-            y_probs = F.softmax(class_logits, dim=1)
-
-            # Reconstruction loss
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
-            rec_loss = torch.mean(-likelihood)
-
-            # KL divergence
-            kl_div = torch.mean(model.kl_div)
-
-            # Total loss (no classification loss)
-            loss = rec_loss + kl_div
-
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-            rec_loss_total += rec_loss.item()
-            kl_loss_total += kl_div.item()
-
-        print(
-            f"Epoch [{epoch+1}/{num_epochs}], "
-            f"Total Loss: {total_loss:.4f}, "
-            f"Rec Loss: {rec_loss_total:.4f}, "
-            f"KL Div: {kl_loss_total:.4f}, "
-            f"Class Loss: {class_loss_total:.4f}"
-        )
-
-
-def train_model(
-    model,
-    optimizer,
-    train_loader,
-    num_epochs=10,
-    save=True,
-    save_dir="./",
-    model_name="model",
-):
-    model = model.to(device)
-    model.train()
-
-    # Initialize arrays to store losses per epoch
-    training_total_loss = np.zeros(num_epochs)
-    training_rec_loss = np.zeros(num_epochs)
-    training_kl_loss = np.zeros(num_epochs)
-    training_class_loss = np.zeros(num_epochs)
-
-    for epoch in range(num_epochs):
-        total_loss = 0
-        rec_loss_total = 0
-        kl_loss_total = 0
-        class_loss_total = 0
-        num_batches = len(train_loader)
-
-        for X_batch, y_batch in train_loader:
-            X_batch = X_batch.unsqueeze(1).to(
-                device
-            )  # Shape: [batch_size, num_param, window_size]
-            y_batch = y_batch.to(device)
-
-            y_onehot = F.one_hot(y_batch, num_classes=model.num_classes).float()
-
-            optimizer.zero_grad()
-            x_rec, class_logits = model(X_batch, y_onehot)
-
-            # Reconstruction loss
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
-            rec_loss = torch.mean(-likelihood)
-
-            # KL divergence
-            kl_div = torch.mean(model.kl_div)
-
-            # Classification loss
-            class_loss = F.cross_entropy(class_logits, y_batch)
-
-            # Total loss
-            loss = rec_loss + kl_div + class_loss
-
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-            rec_loss_total += rec_loss.item()
-            kl_loss_total += kl_div.item()
-            class_loss_total += class_loss.item()
-
-        num_batches = 1  # TODO: delete this
-        # print(num_batches)
-        # Compute average losses per epoch
-        avg_total_loss = total_loss / num_batches
-        avg_rec_loss = rec_loss_total / num_batches
-        avg_kl_loss = kl_loss_total / num_batches
-        avg_class_loss = class_loss_total / num_batches
-
-        # Store losses in arrays
-        training_total_loss[epoch] = avg_total_loss
-        training_rec_loss[epoch] = avg_rec_loss
-        training_kl_loss[epoch] = avg_kl_loss
-        training_class_loss[epoch] = avg_class_loss
-
-        print(
-            f"Epoch [{epoch+1}/{num_epochs}], "
-            f"Total Loss: {avg_total_loss:.4f}, "
-            f"Rec Loss: {avg_rec_loss:.4f}, "
-            f"KL Div: {avg_kl_loss:.4f}, "
-            f"Class Loss: {avg_class_loss:.4f}"
-        )
-
-    if save:
-        torch.save(model.state_dict(), (save_dir + model_name + ".pth"))
-        np.savez_compressed(
-            (save_dir + model_name + "_training_loss"),
-            training_total_loss=training_total_loss,
-            training_rec_loss=training_rec_loss,
-            training_kl_loss=training_kl_loss,
-            training_class_loss=training_class_loss,
-        )
-    return model
-
-
-        print(
-            f"Epoch [{epoch+1}/{num_epochs}], "
-            f"Total Loss: {total_loss:.4f}, "
-            f"Rec Loss: {rec_loss_total:.4f}, "
-            f"KL Div: {kl_loss_total:.4f}, "
-            f"Class Loss: {class_loss_total:.4f}"
-        )
 
 
 def train_model(
@@ -408,9 +194,6 @@ def train_model_full(model, optimizer, train_loader, num_epochs=10):
             X_batch = X_batch.unsqueeze(1).to(
                 device
             )  # Shape: [batch_size, num_param, window_size]
-            X_batch = X_batch.unsqueeze(1).to(
-                device
-            )  # Shape: [batch_size, num_param, window_size]
             y_batch = y_batch.to(device)
 
             y_onehot = F.one_hot(y_batch, num_classes=model.num_classes).float()
@@ -419,7 +202,6 @@ def train_model_full(model, optimizer, train_loader, num_epochs=10):
             x_rec, class_logits = model(X_batch, y_onehot)
 
             # Reconstruction loss
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
             likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
             rec_loss = torch.mean(-likelihood)
 
@@ -447,19 +229,9 @@ def train_model_full(model, optimizer, train_loader, num_epochs=10):
             f"KL Div: {kl_loss_total:.4f}, "
             f"Class Loss: {class_loss_total:.4f}"
         )
-        print(
-            f"Epoch [{epoch+1}/{num_epochs}], "
-            f"Total Loss: {total_loss:.4f}, "
-            f"Rec Loss: {rec_loss_total:.4f}, "
-            f"KL Div: {kl_loss_total:.4f}, "
-            f"Class Loss: {class_loss_total:.4f}"
-        )
     return model
 
 
-
-def find_score(model, data, metric="MSE", num_sample=50):
-    model = model.to("cpu")
 def find_score(model, data, metric="MSE", num_sample=50):
     model = model.to("cpu")
     model.eval()
@@ -476,11 +248,6 @@ def find_score(model, data, metric="MSE", num_sample=50):
                 data_tensor.view(data_tensor.size(0), -1),
                 metric,
             )
-            lh_loss = likelihood_loss(
-                x_rec.view(x_rec.size(0), -1),
-                data_tensor.view(data_tensor.size(0), -1),
-                metric,
-            )
             anomaly_score[:, i] = lh_loss.numpy()
             class_probs += F.softmax(class_logits, dim=1).numpy()
 
@@ -491,9 +258,6 @@ def find_score(model, data, metric="MSE", num_sample=50):
     # For anomaly detection, you might consider:
     # - High reconstruction error
     # - High probability of anomaly class
-    anomaly_scores = (
-        avg_anomaly_score * avg_class_probs[:, 1]
-    )  # Assuming class 1 is anomaly
     anomaly_scores = (
         avg_anomaly_score * avg_class_probs[:, 1]
     )  # Assuming class 1 is anomaly
