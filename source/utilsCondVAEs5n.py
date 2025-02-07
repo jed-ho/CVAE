@@ -10,7 +10,7 @@ cuda = torch.cuda.is_available()
 device = torch.device("cuda" if cuda else "cpu")
 
 
-class Dataset(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset): #deprecated
     def __init__(self, data, labels=None):
         self.data = data
         self.labels = labels  # Labels can be None for unlabeled data
@@ -27,7 +27,7 @@ class Dataset(torch.utils.data.Dataset):
             return X
 
 
-def get_dataset(train, validation, batch_size=128):
+def get_dataset(train, validation, batch_size=128): #deprecated
     """this function creates the dataloader for the training and validation
     data to be used for training.
 
@@ -62,7 +62,7 @@ def get_dataset(train, validation, batch_size=128):
 
 
 def likelihood_loss(
-    r, x, metric="BCE"
+    r, x, metric="MSE"
 ):  # ChatGPT(#CondVAE): Since the data might not be binary, consider using Mean Squared Error (MSE) loss.
     """calculates likelihood loss between input and its reconstruction
 
@@ -99,7 +99,6 @@ def train_model(
     save_dir="./",
     model_name="model",
 ):
-    time_start = time.time()
     model = model.to(device)
     model.train()
 
@@ -128,8 +127,7 @@ def train_model(
             x_rec, class_logits = model(X_batch, y_onehot)
 
             # Reconstruction loss
-            likelihood = -likelihood_loss(x_rec, X_batch, metric="MSE")
-            rec_loss = torch.mean(-likelihood)
+            rec_loss = torch.mean(likelihood_loss(x_rec, X_batch, metric="MSE"))
 
             # KL divergence
             kl_div = torch.mean(model.kl_div)
@@ -138,7 +136,7 @@ def train_model(
             class_loss = F.cross_entropy(class_logits, y_batch)
 
             # Total loss
-            loss = rec_loss + kl_div + class_loss
+            loss = 0.01*rec_loss + kl_div + 0.01*class_loss
 
             loss.backward()
             optimizer.step()
@@ -179,12 +177,10 @@ def train_model(
             training_kl_loss=training_kl_loss,
             training_class_loss=training_class_loss,
         )
-    time_end = time.time()
-    print('Time elapsed: ', time_end - time_start)
     return model
 
 
-def train_model_full(model, optimizer, train_loader, num_epochs=10):
+def train_model_full(model, optimizer, train_loader, num_epochs=10): #deprecated
     model = model.to(device)
     model.train()
     for epoch in range(num_epochs):
@@ -235,7 +231,7 @@ def train_model_full(model, optimizer, train_loader, num_epochs=10):
     return model
 
 
-def find_score(model, data, metric="MSE", num_sample=50):
+def find_score(model, data, metric="MSE", num_sample=50): #deprecated
     model = model.to("cpu")
     model.eval()
     num_data = np.shape(data)[0]
