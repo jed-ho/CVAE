@@ -99,6 +99,7 @@ def train_model(
     save_dir="./",
     model_name="model",
 ):
+    time_start = time.time()
     model = model.to(device)
     model.train()
 
@@ -178,6 +179,8 @@ def train_model(
             training_kl_loss=training_kl_loss,
             training_class_loss=training_class_loss,
         )
+    time_end = time.time()
+    print('Time elapsed: ', time_end - time_start)
     return model
 
 
