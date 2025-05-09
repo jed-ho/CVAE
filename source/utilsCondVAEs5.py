@@ -10,7 +10,7 @@ cuda = torch.cuda.is_available()
 device = torch.device("cuda" if cuda else "cpu")
 
 
-class Dataset(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset):  # deprecated
     def __init__(self, data, labels=None):
         self.data = data
         self.labels = labels  # Labels can be None for unlabeled data
@@ -27,7 +27,7 @@ class Dataset(torch.utils.data.Dataset):
             return X
 
 
-def get_dataset(train, validation, batch_size=128):
+def get_dataset(train, validation, batch_size=128):  # deprecated
     """this function creates the dataloader for the training and validation
     data to be used for training.
 
@@ -180,11 +180,11 @@ def train_model(
             training_class_loss=training_class_loss,
         )
     time_end = time.time()
-    print('Time elapsed: ', time_end - time_start)
+    print("Time elapsed: ", time_end - time_start)
     return model
 
 
-def train_model_full(model, optimizer, train_loader, num_epochs=10):
+def train_model_full(model, optimizer, train_loader, num_epochs=10):  # deprecated
     model = model.to(device)
     model.train()
     for epoch in range(num_epochs):
@@ -235,7 +235,7 @@ def train_model_full(model, optimizer, train_loader, num_epochs=10):
     return model
 
 
-def find_score(model, data, metric="MSE", num_sample=50):
+def find_score(model, data, metric="MSE", num_sample=50):  # deprecated
     model = model.to("cpu")
     model.eval()
     num_data = np.shape(data)[0]
